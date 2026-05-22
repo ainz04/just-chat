@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Liquid Glass Chat - Serverless Obrolan Rahasia</title>
+  
+  <!-- SEO Meta Tags -->
+  <meta name="description" content="Aplikasi chat rahasia dan anonim serverless dengan desain kaca cair (liquid glassmorphism) ala macOS & iOS. Tanpa server, tanpa registrasi, aman, dan instan.">
+  <meta name="author" content="Antigravity Team">
+  
+  <!-- Google Fonts: Outfit (Heading) & Inter (Body) -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Outfit:wght@400;600;700;800&display=swap" rel="stylesheet">
+  
+  <!-- Custom Stylesheet -->
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+  <!-- Dynamic Fluid Background Spheres -->
+  <div class="fluid-bg">
+    <div class="blob blob-1"></div>
+    <div class="blob blob-2"></div>
+    <div class="blob blob-3"></div>
+    <div class="blob blob-4"></div>
+  </div>
+
+  <!-- App Wrapper -->
+  <main class="app-wrapper">
+    
+    <!-- 1. LOBBY SCREEN -->
+    <section id="lobby-screen" class="glass-panel active">
+      <!-- macOS Style Windows Control dots -->
+      <div class="window-controls">
+        <span class="dot close"></span>
+        <span class="dot minimize"></span>
+        <span class="dot expand"></span>
+      </div>
+      
+      <div class="lobby-header">
+        <div class="logo-icon">💬</div>
+        <h1>Liquid Glass Chat</h1>
+        <p class="subtitle">Obrolan Rahasia Serverless (Sandi Sama = Terhubung)</p>
+      </div>
+
+      <!-- Tabs for Join/Create -->
+      <div class="tab-container glass-inner">
+        <button id="tab-join" class="tab-btn active" onclick="switchTab('join')">Gabung Chat</button>
+        <button id="tab-create" class="tab-btn" onclick="switchTab('create')">Buat Chat Baru</button>
+      </div>
+
+      <!-- Lobby Form -->
+      <form id="lobby-form" onsubmit="handleLobbySubmit(event)">
+        <div class="input-group">
+          <label for="room-code" id="input-label">Masukkan Kode Chat untuk Bergabung</label>
+          <div class="input-wrapper glass-inner">
+            <input type="password" id="room-code" placeholder="Contoh: rahasia123" required autocomplete="off">
+            <button type="button" class="btn-toggle-pass" onclick="togglePasswordVisibility()" title="Tampilkan/Sembunyikan Kode">
+              <svg id="eye-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" width="20" height="20">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178z" />
+                <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+              </svg>
+            </button>
+          </div>
+          <span class="tip-msg" id="input-tip">Masukkan kode yang telah disepakati bersama teman Anda.</span>
+        </div>
+
+        <!-- Custom Notification Toast -->
+        <div id="lobby-error" class="error-toast">
+          <span class="error-icon">⚠️</span>
+          <span id="error-text">Terjadi kesalahan. Coba lagi.</span>
+        </div>
+
+        <button type="submit" id="submit-btn" class="btn-primary">Gabung Chat</button>
+      </form>
+
+      <div class="lobby-footer">
+        <p>🔒 Serverless & Anonim. Pesan dikirim langsung antar browser Anda tanpa database. File dihapus cloud otomatis dalam 24 jam.</p>
+      </div>
+    </section>
+
+    <!-- 2. CHAT ROOM SCREEN -->
+    <section id="chat-screen" class="glass-panel">
+      <!-- macOS Style Header -->
+      <header class="chat-header">
+        <div class="header-left">
+          <div class="window-controls">
+            <span class="dot close" onclick="leaveRoom()" title="Keluar Chat"></span>
+            <span class="dot minimize"></span>
+            <span class="dot expand"></span>
+          </div>
+          
+          <div class="room-info">
+            <div class="room-title-wrapper">
+              <span class="room-indicator">●</span>
+              <span class="room-title">Room: </span>
+              <span id="display-room-code" class="secure-code" onclick="toggleDisplayCode()">••••••</span>
+              <button class="btn-reveal-code" onclick="toggleDisplayCode()" title="Tampilkan/Sembunyikan Kode">
+                <svg id="eye-icon-chat" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" width="14" height="14">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178z" />
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                </svg>
+              </button>
+            </div>
+            <p id="user-count" class="user-count">Menghubungkan ke Broker...</p>
+          </div>
+        </div>
+
+        <div class="header-right">
+          <!-- Avatars list dynamically populated -->
+          <div id="users-avatars-list" class="avatars-group" title="Daftar Pengguna Aktif"></div>
+          <button class="btn-secondary" onclick="leaveRoom()">Keluar</button>
+        </div>
+      </header>
+
+      <!-- Message Area -->
+      <div id="chat-messages" class="chat-messages-container">
+        <!-- Message bubbles loaded here -->
+        <div class="system-message">
+          <span class="system-tag">Selamat datang! Obrolan ini sepenuhnya rahasia, serverless, dan aman.</span>
+        </div>
+      </div>
+
+      <!-- Typing Indicator -->
+      <div id="typing-indicator" class="typing-indicator-box">
+        <span class="typing-dots">
+          <span></span>
+          <span></span>
+          <span></span>
+        </span>
+        <span id="typing-text">Seseorang sedang mengetik...</span>
+      </div>
+
+      <!-- File Drag & Drop Hover Overlay -->
+      <div id="drop-overlay" class="drag-drop-overlay">
+        <div class="overlay-content">
+          <div class="overlay-icon">📁</div>
+          <h3>Lepaskan untuk Mengirim File</h3>
+          <p>Kirim foto, video, atau dokumen rahasia secara aman</p>
+        </div>
+      </div>
+
+      <!-- File Uploading Progress Glass bar -->
+      <div id="upload-progress-container" class="upload-progress-container">
+        <div class="upload-progress-card glass-inner">
+          <div class="upload-details">
+            <span class="upload-filename" id="progress-filename">mengupload_file.mp4</span>
+            <span class="upload-percent" id="progress-percent">0%</span>
+          </div>
+          <div class="progress-bar-bg">
+            <div class="progress-bar-fill" id="progress-bar-fill"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Input Footer Area -->
+      <footer class="chat-footer">
+        <div class="input-panel glass-inner">
+          <!-- Attachment Button -->
+          <button type="button" class="btn-attach" onclick="triggerFileSelect()" title="Lampirkan File/Foto/Video">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" width="22" height="22">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M18.375 12.739l-7.693 7.693a4.5 4.5 0 01-6.364-6.364l10.94-10.94A3 3 0 1119.5 7.372L8.552 18.32m.009-.01l-.01.01m5.699-9.941l-7.81 7.81a1.5 1.5 0 002.112 2.13" />
+            </svg>
+          </button>
+          
+          <!-- File selection element (hidden) -->
+          <input type="file" id="file-input" onchange="handleFileSelected(event)" style="display: none;">
+
+          <!-- Chat Input Field -->
+          <input type="text" id="chat-input" placeholder="Tulis pesan rahasia di sini..." autocomplete="off" oninput="handleTyping()">
+
+          <!-- Send Message Button -->
+          <button type="button" class="btn-send" onclick="sendMessage()" title="Kirim">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" width="18" height="18">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M6 12L3.269 3.126A59.768 59.768 0 0121.485 12 59.77 59.77 0 013.27 20.876L5.999 12zm0 0h7.5" />
+            </svg>
+          </button>
+        </div>
+      </footer>
+    </section>
+
+  </main>
+
+  <!-- Import MQTT Client over WebSockets -->
+  <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
+  <!-- Main Application Script -->
+  <script src="js/app.js"></script>
+</body>
+</html>
