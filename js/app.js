@@ -42,6 +42,8 @@ let presenceCheckInterval = null;
 let typingTimeout = null;
 let isTyping = false;
 let inactivityTimer = null;
+let isVerifyingJoin = false;
+let joinCheckTimeout = null;
 
 // Audio Synthesizer (Web Audio API)
 function playSynthesizedSound(type) {
@@ -223,6 +225,33 @@ function handleLobbySubmit(event) {
   connectToMqttBroker();
 }
 
+// Complete connection transitions and starts room heartbeats
+function completeConnection() {
+  // Clear error
+  document.getElementById('lobby-error').style.display = 'none';
+  
+  // Switch screens
+  document.getElementById('lobby-screen').classList.remove('active');
+  document.getElementById('chat-screen').classList.add('active');
+  
+  // Set static UI values
+  updateUsersUI();
+  document.getElementById('display-room-code').innerText = '••••••';
+  isCodeVisible = false;
+  
+  // Play transition chime
+  playSynthesizedSound('connect');
+  
+  // Start Decentralized Presence heartbeats
+  startPresenceHeartbeat();
+  
+  // Start inactivity timer
+  resetInactivityTimer();
+  
+  // Send system join notice
+  sendSystemJoinNotice();
+}
+
 // Connect to secure HiveMQ WebSockets public broker
 function connectToMqttBroker() {
   const brokerUrl = 'wss://broker.hivemq.com:8884/mqtt';
@@ -254,26 +283,21 @@ function connectToMqttBroker() {
     // Clear error
     document.getElementById('lobby-error').style.display = 'none';
     
-    // Switch screens
-    document.getElementById('lobby-screen').classList.remove('active');
-    document.getElementById('chat-screen').classList.add('active');
-    
-    // Set static UI values
-    updateUsersUI();
-    document.getElementById('display-room-code').innerText = '••••••';
-    isCodeVisible = false;
-    
-    // Play transition chime
-    playSynthesizedSound('connect');
-    
-    // Start Decentralized Presence heartbeats
-    startPresenceHeartbeat();
-    
-    // Start inactivity timer
-    resetInactivityTimer();
-    
-    // Send system join notice
-    sendSystemJoinNotice();
+    if (currentTab === 'join') {
+      isVerifyingJoin = true;
+      // Publish join presence to probe for existing active users
+      sendHeartbeat('join');
+      
+      // Start handshake timeout
+      joinCheckTimeout = setTimeout(() => {
+        if (isVerifyingJoin) {
+          leaveRoom('Grup dengan kode ini tidak aktif atau sudah kosong. Silakan buat grup baru di tab \'Buat Chat Baru\'.');
+        }
+      }, 2000);
+    } else {
+      isVerifyingJoin = false;
+      completeConnection();
+    }
   });
   
   client.on('message', (topic, payload) => {
@@ -316,7 +340,7 @@ function startPresenceHeartbeat() {
   presenceCheckInterval = setInterval(checkExpiredUsers, 4000);
 }
 
-function sendHeartbeat() {
+function sendHeartbeat(action) {
   if (!client || !client.connected) return;
   
   const payload = {
@@ -324,6 +348,10 @@ function sendHeartbeat() {
     avatar: myAvatar,
     timestamp: Date.now()
   };
+  
+  if (action) {
+    payload.action = action;
+  }
   
   client.publish(`just_chat/rooms/${currentRoom}/presence`, JSON.stringify(payload));
 }
@@ -337,6 +365,11 @@ function handleIncomingPresence(data) {
     return;
   }
   
+  // If someone is trying to join, reply immediately so they can verify and enter
+  if (data.action === 'join') {
+    sendHeartbeat();
+  }
+  
   // Register or update active user details
   activeUsers.set(data.id, {
     avatar: data.avatar || '👤',
@@ -344,6 +377,13 @@ function handleIncomingPresence(data) {
   });
   
   updateUsersUI();
+  
+  // If we are currently verifying our join, we have now confirmed the room has active users!
+  if (isVerifyingJoin) {
+    isVerifyingJoin = false;
+    if (joinCheckTimeout) clearTimeout(joinCheckTimeout);
+    completeConnection();
+  }
 }
 
 function checkExpiredUsers() {
@@ -424,6 +464,9 @@ function leaveRoom(reason) {
   if (presenceCheckInterval) clearInterval(presenceCheckInterval);
   if (typingTimeout) clearTimeout(typingTimeout);
   if (inactivityTimer) clearTimeout(inactivityTimer);
+  if (joinCheckTimeout) clearTimeout(joinCheckTimeout);
+  
+  isVerifyingJoin = false;
   
   // Send leave announcement and presence leave payload
   if (client && client.connected) {
