@@ -41,6 +41,7 @@ let presenceInterval = null;
 let presenceCheckInterval = null;
 let typingTimeout = null;
 let isTyping = false;
+let inactivityTimer = null;
 
 // Audio Synthesizer (Web Audio API)
 function playSynthesizedSound(type) {
@@ -268,6 +269,9 @@ function connectToMqttBroker() {
     // Start Decentralized Presence heartbeats
     startPresenceHeartbeat();
     
+    // Start inactivity timer
+    resetInactivityTimer();
+    
     // Send system join notice
     sendSystemJoinNotice();
   });
@@ -359,6 +363,17 @@ function checkExpiredUsers() {
   }
 }
 
+// Inactivity Management (Auto-destroy room on 25 minutes idle)
+function resetInactivityTimer() {
+  if (inactivityTimer) clearTimeout(inactivityTimer);
+  
+  if (!currentRoom) return;
+  
+  inactivityTimer = setTimeout(() => {
+    leaveRoom('Obrolan ditutup secara otomatis karena tidak ada aktivitas selama 25 menit.');
+  }, 25 * 60 * 1000); // 25 minutes
+}
+
 // Update Room Presence HUD in the Header
 function updateUsersUI() {
   const userCountEl = document.getElementById('user-count');
@@ -403,11 +418,12 @@ function sendSystemJoinNotice() {
 }
 
 // Leave room: Cleanup client, intervals, switch UI screens
-function leaveRoom() {
-  // Clear heartbeat loops
+function leaveRoom(reason) {
+  // Clear heartbeat loops and timers
   if (presenceInterval) clearInterval(presenceInterval);
   if (presenceCheckInterval) clearInterval(presenceCheckInterval);
   if (typingTimeout) clearTimeout(typingTimeout);
+  if (inactivityTimer) clearTimeout(inactivityTimer);
   
   // Send leave announcement and presence leave payload
   if (client && client.connected) {
@@ -447,6 +463,11 @@ function leaveRoom() {
   // Switch back to lobby
   document.getElementById('chat-screen').classList.remove('active');
   document.getElementById('lobby-screen').classList.add('active');
+  
+  // Display toast error if reason is provided
+  if (reason) {
+    showLobbyError(reason);
+  }
   
   // Enable submit button
   const submitBtn = document.getElementById('submit-btn');
@@ -526,6 +547,9 @@ function handleIncomingTyping(data) {
 
 // Receive Messages & File Downloads to Chat window
 function handleIncomingMessage(msg) {
+  // Reset inactivity timer upon any message interaction
+  resetInactivityTimer();
+
   const messagesBox = document.getElementById('chat-messages');
   const isScrollAtBottom = messagesBox.scrollHeight - messagesBox.clientHeight <= messagesBox.scrollTop + 50;
   
