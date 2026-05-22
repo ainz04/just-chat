@@ -1,10 +1,10 @@
 /**
- * LIQUID GLASS CHAT - CORE APPLICATION LOGIC
+ * JUST-CHAT! - CORE APPLICATION LOGIC
  * Serverless chat system using public MQTT broker & tmpfiles.org api.
  */
 
 // Generate random Client ID and Avatar for identity
-const clientId = 'lgc_' + Math.random().toString(36).substring(2, 11);
+const clientId = 'jc_' + Math.random().toString(36).substring(2, 11);
 const avatars = ['🐱', '🐶', '🦊', '🦁', '🐸', '🐙', '🦄', '🐼', '🐨', '🦖', '🐝', '🐬', '🦥', '🦉', '🦩', '🦊'];
 const myAvatar = avatars[Math.floor(Math.random() * avatars.length)];
 
@@ -222,7 +222,7 @@ function connectToMqttBroker() {
     console.log('Connected to MQTT broker via WebSockets.');
     
     // Subscribe to Room Topics
-    const baseTopic = `liquid_glass_chat/rooms/${currentRoom}`;
+    const baseTopic = `just_chat/rooms/${currentRoom}`;
     client.subscribe(`${baseTopic}/messages`, { qos: 1 });
     client.subscribe(`${baseTopic}/presence`, { qos: 0 });
     client.subscribe(`${baseTopic}/typing`, { qos: 0 });
@@ -252,7 +252,7 @@ function connectToMqttBroker() {
   client.on('message', (topic, payload) => {
     try {
       const data = JSON.parse(payload.toString());
-      const baseTopic = `liquid_glass_chat/rooms/${currentRoom}`;
+      const baseTopic = `just_chat/rooms/${currentRoom}`;
       
       if (topic === `${baseTopic}/messages`) {
         handleIncomingMessage(data);
@@ -298,7 +298,7 @@ function sendHeartbeat() {
     timestamp: Date.now()
   };
   
-  client.publish(`liquid_glass_chat/rooms/${currentRoom}/presence`, JSON.stringify(payload));
+  client.publish(`just_chat/rooms/${currentRoom}/presence`, JSON.stringify(payload));
 }
 
 function handleIncomingPresence(data) {
@@ -370,7 +370,7 @@ function sendSystemJoinNotice() {
     text: `${myAvatar} bergabung ke obrolan.`,
     timestamp: Date.now()
   };
-  client.publish(`liquid_glass_chat/rooms/${currentRoom}/messages`, JSON.stringify(payload), { qos: 1 });
+  client.publish(`just_chat/rooms/${currentRoom}/messages`, JSON.stringify(payload), { qos: 1 });
 }
 
 // Leave room: Cleanup client, intervals, switch UI screens
@@ -388,7 +388,7 @@ function leaveRoom() {
       text: `${myAvatar} keluar dari obrolan.`,
       timestamp: Date.now()
     };
-    client.publish(`liquid_glass_chat/rooms/${currentRoom}/messages`, JSON.stringify(payload), { qos: 0 });
+    client.publish(`just_chat/rooms/${currentRoom}/messages`, JSON.stringify(payload), { qos: 0 });
     
     client.end(true);
   }
@@ -433,7 +433,7 @@ function sendMessage() {
     timestamp: Date.now()
   };
   
-  client.publish(`liquid_glass_chat/rooms/${currentRoom}/messages`, JSON.stringify(payload), { qos: 1 });
+  client.publish(`just_chat/rooms/${currentRoom}/messages`, JSON.stringify(payload), { qos: 1 });
   
   // Clear inputs and typing indicators
   inputEl.value = '';
@@ -471,7 +471,7 @@ function sendTypingSignal(typingState) {
     typing: typingState
   };
   
-  client.publish(`liquid_glass_chat/rooms/${currentRoom}/typing`, JSON.stringify(payload));
+  client.publish(`just_chat/rooms/${currentRoom}/typing`, JSON.stringify(payload));
 }
 
 function handleIncomingTyping(data) {
@@ -679,7 +679,7 @@ function publishFileMessage(name, size, url) {
     timestamp: Date.now()
   };
   
-  client.publish(`liquid_glass_chat/rooms/${currentRoom}/messages`, JSON.stringify(payload), { qos: 1 });
+  client.publish(`just_chat/rooms/${currentRoom}/messages`, JSON.stringify(payload), { qos: 1 });
 }
 
 // Drag & Drop event bindings
