@@ -942,9 +942,16 @@ body {
    RESPONSIVE DESIGN
    ========================================================================== */
 @media (max-width: 768px) {
+  body {
+    min-height: 100vh;
+    min-height: 100dvh;
+  }
+
   .app-wrapper {
-    height: 100vh;
-    max-height: 100vh;
+    height: 100vh; /* fallback */
+    height: 100dvh;
+    max-height: 100vh; /* fallback */
+    max-height: 100dvh;
     padding: 0;
   }
   
@@ -952,6 +959,10 @@ body {
     border-radius: 0;
     height: 100%;
     border: none;
+  }
+
+  .window-controls {
+    display: none !important; /* Hide macOS window control dots on mobile to maximize title space */
   }
   
   #lobby-screen {
@@ -961,7 +972,7 @@ body {
   }
   
   .chat-header {
-    padding: 12px 16px 12px 70px;
+    padding: calc(12px + env(safe-area-inset-top, 0px)) 16px 12px 16px; /* Reset padding-left since dots are hidden */
   }
   
   .chat-messages-container {
@@ -973,6 +984,6 @@ body {
   }
   
   .chat-footer {
-    padding: 12px 16px 20px 16px;
+    padding: 12px 16px calc(12px + env(safe-area-inset-bottom, 8px)) 16px; /* Dynamic padding for iOS/Android Home indicators */
   }
 }
