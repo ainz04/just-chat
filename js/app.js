@@ -3,10 +3,33 @@
  * Serverless chat system using public MQTT broker & tmpfiles.org api.
  */
 
-// Generate random Client ID and Avatar for identity
-const clientId = 'jc_' + Math.random().toString(36).substring(2, 11);
+// Retrieve or generate persistent Client ID and Avatar for the current session/tab to prevent duplicates on refresh/relog
+const clientId = (() => {
+  try {
+    let id = sessionStorage.getItem('jc_client_id');
+    if (!id) {
+      id = 'jc_' + Math.random().toString(36).substring(2, 11);
+      sessionStorage.setItem('jc_client_id', id);
+    }
+    return id;
+  } catch (e) {
+    return 'jc_' + Math.random().toString(36).substring(2, 11);
+  }
+})();
+
 const avatars = ['🐱', '🐶', '🦊', '🦁', '🐸', '🐙', '🦄', '🐼', '🐨', '🦖', '🐝', '🐬', '🦥', '🦉', '🦩', '🦊'];
-const myAvatar = avatars[Math.floor(Math.random() * avatars.length)];
+const myAvatar = (() => {
+  try {
+    let avatar = sessionStorage.getItem('jc_avatar');
+    if (!avatar) {
+      avatar = avatars[Math.floor(Math.random() * avatars.length)];
+      sessionStorage.setItem('jc_avatar', avatar);
+    }
+    return avatar;
+  } catch (e) {
+    return avatars[Math.floor(Math.random() * avatars.length)];
+  }
+})();
 
 // App State Variables
 let currentRoom = null;
@@ -235,7 +258,7 @@ function connectToMqttBroker() {
     document.getElementById('chat-screen').classList.add('active');
     
     // Set static UI values
-    document.getElementById('user-count').innerText = 'Menunggu pengguna lain...';
+    updateUsersUI();
     document.getElementById('display-room-code').innerText = '••••••';
     isCodeVisible = false;
     
@@ -303,6 +326,12 @@ function sendHeartbeat() {
 
 function handleIncomingPresence(data) {
   if (!data.id || data.id === clientId) return;
+  
+  if (data.action === 'leave') {
+    activeUsers.delete(data.id);
+    updateUsersUI();
+    return;
+  }
   
   // Register or update active user details
   activeUsers.set(data.id, {
@@ -380,8 +409,15 @@ function leaveRoom() {
   if (presenceCheckInterval) clearInterval(presenceCheckInterval);
   if (typingTimeout) clearTimeout(typingTimeout);
   
-  // Send leave announcement
+  // Send leave announcement and presence leave payload
   if (client && client.connected) {
+    const presencePayload = {
+      id: clientId,
+      action: 'leave',
+      timestamp: Date.now()
+    };
+    client.publish(`just_chat/rooms/${currentRoom}/presence`, JSON.stringify(presencePayload), { qos: 0 });
+
     const payload = {
       senderId: 'system',
       type: 'system',
@@ -390,7 +426,7 @@ function leaveRoom() {
     };
     client.publish(`just_chat/rooms/${currentRoom}/messages`, JSON.stringify(payload), { qos: 0 });
     
-    client.end(true);
+    client.end(false);
   }
   
   // Reset values
@@ -707,6 +743,26 @@ dropOverlay.addEventListener('drop', (e) => {
   const files = e.dataTransfer.files;
   if (files && files.length > 0) {
     uploadFileToCloud(files[0]);
+  }
+});
+
+// Graceful cleanup on tab close or reload
+window.addEventListener('beforeunload', () => {
+  if (client && client.connected && currentRoom) {
+    const presencePayload = {
+      id: clientId,
+      action: 'leave',
+      timestamp: Date.now()
+    };
+    client.publish(`just_chat/rooms/${currentRoom}/presence`, JSON.stringify(presencePayload), { qos: 0 });
+
+    const payload = {
+      senderId: 'system',
+      type: 'system',
+      text: `${myAvatar} keluar dari obrolan.`,
+      timestamp: Date.now()
+    };
+    client.publish(`just_chat/rooms/${currentRoom}/messages`, JSON.stringify(payload), { qos: 0 });
   }
 });
 
