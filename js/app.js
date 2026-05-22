@@ -302,7 +302,7 @@ function sendHeartbeat() {
 }
 
 function handleIncomingPresence(data) {
-  if (!data.id) return;
+  if (!data.id || data.id === clientId) return;
   
   // Register or update active user details
   activeUsers.set(data.id, {
