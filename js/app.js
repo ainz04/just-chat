@@ -431,7 +431,7 @@ function updateUsersUI() {
   selfBubble.className = 'avatar-bubble';
   selfBubble.innerText = myAvatar;
   selfBubble.title = 'Anda (Anonim)';
-  selfBubble.style.borderColor = '#a704fd';
+  selfBubble.style.borderColor = 'var(--ios-blue)';
   avatarsListEl.appendChild(selfBubble);
   
   // Add other peers avatar bubbles
